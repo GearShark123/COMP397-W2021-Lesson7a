@@ -5,10 +5,10 @@ using UnityEngine.AI;
 
 public enum BobState
 {
-    IDLE, 
+    IDLE,
     RUN,
     JUMP,
-    STUMBLE
+    KICK
 }
 
 public class BobBehaviour : MonoBehaviour
@@ -16,6 +16,13 @@ public class BobBehaviour : MonoBehaviour
     [Header("Line of Sight")]
     public bool HasLOS;
     public GameObject player;
+
+    [Header("Attack")]
+    public PlayerBehaviour playerBehaviour;
+    public float damageDelay = 1.0f;
+    public bool isAttacking = false;
+    public float kickForce = 4.0f;
+    public float distanceToPlayer;
 
     private NavMeshAgent agent;
     private Animator animator;
@@ -25,28 +32,35 @@ public class BobBehaviour : MonoBehaviour
     {
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
+        playerBehaviour = FindObjectOfType<PlayerBehaviour>();
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
+
         if (HasLOS)
         {
             agent.SetDestination(player.transform.position);
+            distanceToPlayer = Vector3.Distance(transform.position, player.transform.position);
         }
 
-        if (HasLOS && Vector3.Distance(transform.position, player.transform.position) < 3)
+        if (HasLOS && distanceToPlayer < 4 && !isAttacking)
         {
-            animator.SetInteger("AnimState", (int)BobState.STUMBLE);
+            animator.SetInteger("AnimState", (int)BobState.KICK);
+            DoKickDamage();
+            isAttacking = true;
+
             //transform.LookAt(transform.position - player.transform.forward);    
         }
-        else if (HasLOS && agent.isOnOffMeshLink == false)
-        {           
-            animator.SetInteger("AnimState", (int)BobState.RUN);           
+        else if (HasLOS && agent.isOnOffMeshLink == false && distanceToPlayer > 4)
+        {
+            animator.SetInteger("AnimState", (int)BobState.RUN);
+            isAttacking = false;
         }
         else if (HasLOS && agent.isOnOffMeshLink)
-        {                        
-            animator.SetInteger("AnimState", (int)BobState.JUMP);        
+        {
+            animator.SetInteger("AnimState", (int)BobState.JUMP);
         }
         else
         {
@@ -83,5 +97,19 @@ public class BobBehaviour : MonoBehaviour
         {
             HasLOS = false;
         }
-    }    
+    }
+
+    private void DoKickDamage()
+    {
+        playerBehaviour.TakeDamage(20);        
+        StartCoroutine(KickBack());
+    }
+
+    private IEnumerator KickBack()
+    {
+        yield return new WaitForSeconds(1.0f);        
+        var direction = Vector3.Normalize(player.transform.position - transform.position);
+        playerBehaviour.controller.SimpleMove(direction * kickForce);
+        StopCoroutine(KickBack());
+    }
 }

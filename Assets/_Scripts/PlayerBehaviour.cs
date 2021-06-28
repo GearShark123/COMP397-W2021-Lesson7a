@@ -6,7 +6,7 @@ public class PlayerBehaviour : MonoBehaviour
 {
     //public float movementForce, jumpForce;
     //public Rigidbody rigidBody;
-    public CharacterController controller;    
+    public CharacterController controller;
 
     [Header("Control Properties")]
     public float maxSpeed = 10.0f;
@@ -17,16 +17,27 @@ public class PlayerBehaviour : MonoBehaviour
     [Header("Ground Detection Properties")]
     public Transform groundCheck;
     public LayerMask groundMask;
-    public float groundRadius = 0.5f;  
+    public float groundRadius = 0.5f;
     public bool isGrounded;
 
     [Header("MiniMap")]
     public GameObject miniMap;
 
+    [Header("Player Sounds")]
+    public AudioSource jumpSound;
+    public AudioSource hitSound;
+
+    [Header("Healthbar")]
+    public HealthBarScreenSpaceController healthBar;
+
+    [Header("Player Abilities")]
+    [Range(0, 100)]
+    public int health = 100;
+
     // Start is called before the first frame update
     void Start()
     {
-        controller = GetComponent<CharacterController>(); 
+        controller = GetComponent<CharacterController>();
         //rigidBody = GetComponent<Rigidbody>();
     }
 
@@ -50,6 +61,7 @@ public class PlayerBehaviour : MonoBehaviour
         if (Input.GetButton("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2.0f * gravity);
+            jumpSound.Play();
         }
 
         velocity.y += gravity * Time.deltaTime;
@@ -118,5 +130,21 @@ public class PlayerBehaviour : MonoBehaviour
     {
         Gizmos.color = Color.white;
         Gizmos.DrawWireSphere(groundCheck.position, groundRadius);
+    }
+
+    public void TakeDamage(int damage)
+    {
+        health -= damage;
+        Invoke("PlayHitSound", 1.0f);
+        healthBar.TakeDamage(damage);
+        if (health < 0)
+        {
+            health = 0;
+        }
+    }
+
+    public void PlayHitSound()
+    {
+        hitSound.Play();
     }
 }
